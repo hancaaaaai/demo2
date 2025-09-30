@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>心理測驗</title>
+
+  <!-- PWA basics -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="心理測驗">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+  <style>
+    /* Base reset + full-bleed canvas */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans TC", sans-serif;
+      background: #ffffff; color: #111827;
+      /* Prevent bouncing / pull-to-refresh feel in kiosks */
+      overscroll-behavior: none;
+      overscroll-behavior-y: contain;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    /* Safe area for iPad with home indicator */
+    .safe {
+      min-height: 100dvh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Optional top bar to hold restart / fullscreen in browser mode */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+    }
+    .topbar__title { font-weight: 700; }
+    .btn { padding: 8px 12px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; }
+    .btn.primary { background:#111827; color:#fff; border-color:#111827; }
+
+    /* The app area should fill remaining height */
+    .app { flex: 1; display:flex; flex-direction:column; min-height: 0; }
+  </style>
+</head>
+<body>
+  <div class="safe">
+    <div class="topbar">
+      <div class="topbar__title">心理測驗</div>
+      <div>
+        <button class="btn" id="btnFullscreen" title="全螢幕">全螢幕</button>
+        <button class="btn" id="btnInstall" style="display:none">加入主畫面</button>
+      </div>
+    </div>
+
+    <div class="app">
+      <!-- START: original content from demo.html (body only) -->
+<div class="wrap">
+  <header>
+    <h1></h1>
+    <div class="header-right"><button class="btn" id="btnRestart" title="重置">重新開始</button></div>
+  </header>
+  <main id="stage"><!-- 內容由 JS 注入 --></main>
+</div>
+
+<script>
+/*************************
+ * 題庫（依你的指定）
+ *************************/
+const AREAS = {
+  extrovert: { name: '外向活潑', subs: ['幽默','大方'] },
+  introvert: { name: '內向安靜', subs: ['害羞','沉穩'] },
+  warm:      { name: '溫暖關懷', subs: ['溫柔','耐心'] },
+  strong:    { name: '果斷堅強', subs: ['自信','果斷'] },
+  sharp:     { name: '敏銳',     subs: ['聰明','敏銳'] },
+};
+
+// 前 5 題：決定五大區域
+const Q_MAJOR = [
+  { id:1,  text:'題目一', options:[
+    {label:'A 果斷堅強', add:'strong'},
+    {label:'B 外向活潑', add:'extrovert'},
+    {label:'C 敏銳',     add:'sharp'},
+    {label:'D 溫暖關懷', add:'warm'},
+  ]},
+  { id:2,  text:'題目二', options:[
+    {label:'A 敏銳',     add:'sharp'},
+    {label:'B 內向安靜', add:'introvert'},
+    {label:'C 外向活潑', add:'extrovert'},
+    {label:'D 溫暖關懷', add:'warm'},
+  ]},
+  { id:3,  text:'題目三', options:[
+    {label:'A 果斷堅強', add:'strong'},
+    {label:'B 外向活潑', add:'extrovert'},
+    {label:'C 敏銳',     add:'sharp'},
+    {label:'D 內向安靜', add:'introvert'},
+  ]},
+  { id:4,  text:'題目四', options:[
+    {label:'A 內向安靜', add:'introvert'},
+    {label:'B 溫暖關懷', add:'warm'},
+    {label:'C 外向活潑', add:'extrovert'},
+    {label:'D 果斷堅強', add:'strong'},
+  ]},
+  { id:5,  text:'題目五', options:[
+    {label:'A 果斷堅強', add:'strong'},
+    {label:'B 內向安靜', add:'introvert'},
+    {label:'C 敏銳',     add:'sharp'},
+    {label:'D 溫暖關懷', add:'warm'},
+  ]},
+];
+
+// 細分題（每個區域 3 題、兩個選項）
+const Q_MINOR = {
+  extrovert: [
+    { id:6, text:'題目六', options:[{label:'A 幽默', add:'幽默'},{label:'B 大方', add:'大方'}]},
+    { id:7, text:'題目七', options:[{label:'A 幽默', add:'幽默'},{label:'B 大方', add:'大方'}]},
+    { id:8, text:'題目八', options:[{label:'A 大方', add:'大方'},{label:'B 幽默', add:'幽默'}]},
+  ],
+  introvert: [
+    { id:6, text:'題目六', options:[{label:'A 害羞', add:'害羞'},{label:'B 沉穩', add:'沉穩'}]},
+    { id:7, text:'題目七', options:[{label:'A 沉穩', add:'沉穩'},{label:'B 害羞', add:'害羞'}]},
+    { id:8, text:'題目八', options:[{label:'A 沉穩', add:'沉穩'},{label:'B 害羞', add:'害羞'}]},
+  ],
+  warm: [
+    { id:6, text:'題目六', options:[{label:'A 溫柔', add:'溫柔'},{label:'B 耐心', add:'耐心'}]},
+    { id:7, text:'題目七', options:[{label:'A 溫柔', add:'溫柔'},{label:'B 耐心', add:'耐心'}]},
+    { id:8, text:'題目八', options:[{label:'A 溫柔', add:'溫柔'},{label:'B 耐心', add:'耐心'}]},
+  ],
+  strong: [
+    { id:6, text:'題目六', options:[{label:'A 自信', add:'自信'},{label:'B 果斷', add:'果斷'}]},
+    { id:7, text:'題目七', options:[{label:'A 自信', add:'自信'},{label:'B 果斷', add:'果斷'}]},
+    { id:8, text:'題目八', options:[{label:'A 自信', add:'自信'},{label:'B 果斷', add:'果斷'}]},
+  ],
+  sharp: [
+    { id:6, text:'題目六', options:[{label:'A 聰明', add:'聰明'},{label:'B 敏銳', add:'敏銳'}]},
+    { id:7, text:'題目七', options:[{label:'A 敏銳', add:'敏銳'},{label:'B 聰明', add:'聰明'}]},
+    { id:8, text:'題目八', options:[{label:'A 敏銳', add:'敏銳'},{label:'B 聰明', add:'聰明'}]},
+  ],
+};
+
+/*************************
+ * 狀態
+ *************************/
+const stage = document.getElementById('stage');
+const btnRestart = document.getElementById('btnRestart');
+
+const state = {
+  step: 'home', // home -> profile -> major -> minor -> result
+  user: { name:'', gender:'' },
+  majorIdx: 0,
+  minorIdx: 0,
+  majorAnswers: Array(5).fill(null), // 存 add key
+  chosenArea: null,
+  minorAnswers: Array(3).fill(null), // 存 sub label
+};
+
+btnRestart.addEventListener('click', () => resetAll());
+
+function resetAll(){
+  state.step = 'home';
+  state.user = { name:'', gender:'' };
+  state.majorIdx = 0; state.minorIdx = 0;
+  state.majorAnswers = Array(5).fill(null);
+  state.minorAnswers = Array(3).fill(null);
+  state.chosenArea = null;
+  render();
+}
+
+/*************************
+ * UI 渲染
+ *************************/
+function render(){
+  if(state.step==='home') return renderHome();
+  if(state.step==='profile') return renderProfile();
+  if(state.step==='major') return renderMajor();
+  if(state.step==='minor') return renderMinor();
+  if(state.step==='result') return renderResult();
+}
+
+function renderHome(){
+  stage.innerHTML = `
+    <div class="center" id="homeCenter" style="flex-direction:column;gap:16px;flex:1;cursor:pointer;">
+      <h1 style="margin:0;font-size:36px;font-weight:700;">心理測驗 DEMO</h1>
+    </div>
+  `;
+  const go = ()=>{ state.step='profile'; render(); };
+  stage.addEventListener('click', go, { once:true });
+}
+
+function renderProfile(){
+  stage.innerHTML = `
+    <h2>個人資料</h2>
+    <div class="grid2" style="margin-top:8px;">
+      <div class="field">
+        <label>名字</label>
+        <input type="text" id="name" placeholder="請輸入名字" value="${escapeHTML(state.user.name)}"/>
+      </div>
+      <div class="field">
+        <label>性別</label>
+        <div class="radio">
+          <label><input type="radio" name="gender" value="男" ${state.user.gender==='男'?'checked':''}/> 男</label>
+          <label><input type="radio" name="gender" value="女" ${state.user.gender==='女'?'checked':''}/> 女</label>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn" id="backHome">← 回首頁</button>
+      <button class="btn primary" id="toQ1">前往題目一</button>
+    </div>
+  `;
+  document.getElementById('backHome').addEventListener('click', ()=>{ state.step='home'; render(); });
+  document.getElementById('toQ1').addEventListener('click', ()=>{
+    const name = document.getElementById('name').value.trim();
+    const g = (document.querySelector('input[name=gender]:checked')||{}).value||'';
+    state.user = { name, gender:g };
+    state.step='major'; state.majorIdx=0; render();
+  });
+}
+
+function renderMajor(){
+  const q = Q_MAJOR[state.majorIdx];
+  const selected = state.majorAnswers[state.majorIdx];
+  stage.innerHTML = `
+    <h2>題目 ${state.majorIdx+1}</h2>
+    <h3>${escapeHTML(q.text)}</h3>
+    <div class="grid2" id="opts"></div>
+    <div class="footer">
+      <button class="btn" id="prevBtn">← 上一題</button>
+    </div>
+  `;
+  const opts = document.getElementById('opts');
+  q.options.forEach((op)=>{
+    const b = document.createElement('button'); b.className='option'; b.textContent = op.label; if(selected===op.add) b.classList.add('selected'); opts.appendChild(b);
+    b.addEventListener('click', ()=>{ state.majorAnswers[state.majorIdx] = op.add; autoAdvanceFromMajor(); });
+  });
+  document.getElementById('prevBtn').addEventListener('click', ()=>{
+    if(state.majorIdx>0){ state.majorIdx--; render(); } else { state.step='profile'; render(); }
+  });
+}
+
+function autoAdvanceFromMajor(){
+  if(state.majorIdx<4){ state.majorIdx++; render(); }
+  else {
+    const counts = tally(state.majorAnswers);
+    state.chosenArea = decideArea(counts);
+    state.step='minor'; state.minorIdx=0; render();
+  }
+}
+
+function renderMinor(){
+  const arr = Q_MINOR[state.chosenArea];
+  const q = arr[state.minorIdx];
+  const selected = state.minorAnswers[state.minorIdx];
+  stage.innerHTML = `
+    <h2>題目 ${state.minorIdx+6}</h2>
+    <h3>${escapeHTML(q.text)}</h3>
+    <div class="grid2" id="opts"></div>
+    <div class="footer">
+      <button class="btn" id="prevBtn">← 上一題</button>
+    </div>
+  `;
+  const opts = document.getElementById('opts');
+  q.options.forEach((op)=>{
+    const b = document.createElement('button'); b.className='option'; b.textContent = op.label; if(selected===op.add) b.classList.add('selected'); opts.appendChild(b);
+    b.addEventListener('click', ()=>{ state.minorAnswers[state.minorIdx] = op.add; autoAdvanceFromMinor(); });
+  });
+  document.getElementById('prevBtn').addEventListener('click', ()=>{
+    if(state.minorIdx>0){ state.minorIdx--; render(); }
+    else { state.step='major'; state.majorIdx=4; render(); }
+  });
+}
+
+function autoAdvanceFromMinor(){
+  if(state.minorIdx<2){ state.minorIdx++; render(); }
+  else { state.step='result'; render(); }
+}
+
+function renderResult(){
+  const subs = AREAS[state.chosenArea].subs; // [subA, subB]
+  const subCounts = tally(state.minorAnswers);
+  const finalSub = decideSub(subCounts, subs);
+  const gender = state.user.gender||'';
+  const resultText = `${finalSub}${gender}`; // 僅顯示「害羞女」結構
+  stage.innerHTML = `
+    <h2>結果：${escapeHTML(resultText)}</h2>
+    <div class="footer" style="justify-content:flex-end;">
+      <button class="btn primary" onclick="resetAll()">再測一次</button>
+    </div>
+  `;
+}
+
+/*************************
+ * 輔助與邏輯
+ *************************/
+function tally(arr){
+  const map = {};
+  arr.forEach(k=>{ if(!k) return; map[k] = (map[k]||0)+1; });
+  return map;
+}
+
+function decideArea(counts){
+  const order = ['extrovert','introvert','warm','strong','sharp'];
+  let best = order[0], max = -1;
+  for(const k of order){ const v = counts[k]||0; if(v>max){ max=v; best=k; } }
+  return best;
+}
+
+function decideSub(subCounts, subs){
+  const a = subs[0], b = subs[1];
+  const sa = subCounts[a]||0, sb = subCounts[b]||0;
+  if(sa>sb) return a; if(sb>sa) return b; return a; // 同分取第一個
+}
+
+function escapeHTML(s){
+  return String(s||'').replace(/[&<>\"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));
+}
+
+// 啟動
+resetAll();
+</script>
+
+      <!-- END: original content -->
+    </div>
+  </div>
+
+<script>
+// Minimal Fullscreen for in-browser runs (PWA installed won't need this)
+const fsBtn = document.getElementById('btnFullscreen');
+fsBtn?.addEventListener('click', async () => {
+  const el = document.documentElement;
+  if (el.requestFullscreen) await el.requestFullscreen();
+});
+
+// PWA install hint on iOS is manual via "Share > Add to Home Screen".
+// We show a helper button on non-iOS supporting beforeinstallprompt (Android/desktop Chromium).
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); deferredPrompt = e;
+  const btn = document.getElementById('btnInstall');
+  if(btn){ btn.style.display = 'inline-block'; btn.onclick = async () => { deferredPrompt.prompt(); deferredPrompt = null; }; }
+});
+
+// Register service worker (optional offline & faster loads)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
+</script>
+</body>
+</html>
