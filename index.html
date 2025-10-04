@@ -13,41 +13,261 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
 
   <style>
-    /* Base reset + full-bleed canvas */
-    * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans TC", sans-serif;
-      background: #ffffff; color: #111827;
-      /* Prevent bouncing / pull-to-refresh feel in kiosks */
-      overscroll-behavior: none;
-      overscroll-behavior-y: contain;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    /* Safe area for iPad with home indicator */
-    .safe {
-      min-height: 100dvh;
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-      display: flex;
-      flex-direction: column;
-    }
+      /* ==== Layout-only skin (drop-in) ======================================= */
+      /* 字體與色彩變數（可依品牌色調整） */
+      :root {
+          --bg: #0f172a; /* 背景 */
+          --card: #111827; /* 卡片底 */
+          --muted: #94a3b8; /* 次要文字 */
+          --text: #e5e7eb; /* 主要文字 */
+          --line: #1f2937; /* 邊線 */
+          --accent: #22d3ee; /* 強調色 */
+          --accent-ink: #0b1220; /* 強調按鈕文字底 */
+          --radius: 16px; /* 卡片圓角 */
+      }
 
-    /* Optional top bar to hold restart / fullscreen in browser mode */
-    .topbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 16px;
-    }
-    .topbar__title { font-weight: 700; }
-    .btn { padding: 8px 12px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; }
-    .btn.primary { background:#111827; color:#fff; border-color:#111827; }
+      /* 全局字體與行距（視窗大時微調更舒適） */
+      html {
+          font-size: 16px;
+      }
 
-    /* The app area should fill remaining height */
-    .app { flex: 1; display:flex; flex-direction:column; min-height: 0; }
+      @media (min-width: 1024px) {
+          html {
+              font-size: 17px;
+          }
+      }
+
+      body {
+          background: var(--bg);
+          color: var(--text);
+          font-family: ui-sans-serif, -apple-system, "Noto Sans TC", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+          line-height: 1.6;
+      }
+
+      /* 版心：safe 為你的外層容器，讓內容不貼邊、置中 */
+      .safe {
+          max-width: 960px;
+          margin: 0 auto;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          min-height: 100dvh;
+          gap: 12px;
+      }
+
+      /* 頂部列：更清晰的分隔線與內距；捲動時穩固 */
+      .topbar {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: rgba(15,23,42,.85);
+          backdrop-filter: blur(6px);
+          border-bottom: 1px solid var(--line);
+          padding: 12px 0 !important;
+      }
+
+      .topbar__title {
+          font-weight: 800;
+          letter-spacing: .2px;
+      }
+
+      /* 主要內容區：卡片化呈現，保留你的 .app 結構 */
+      .app {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+      }
+
+      .section {
+          background: var(--card);
+          border: 1px solid var(--line);
+          border-radius: var(--radius);
+          padding: clamp(16px, 3.2vw, 28px);
+      }
+
+      /* 標題層級與間距 */
+      h1 {
+          font-size: clamp(24px, 3.6vw, 36px);
+          line-height: 1.25;
+          margin: 0 0 8px;
+      }
+
+      h2 {
+          font-size: clamp(20px, 2.4vw, 24px);
+          line-height: 1.35;
+          margin: 0 0 6px;
+      }
+
+      h3 {
+          font-size: clamp(16px, 2vw, 18px);
+          line-height: 1.45;
+          margin: 0 0 6px;
+      }
+
+      p {
+          margin: 6px 0;
+          color: var(--text);
+      }
+
+      /* 共用格線（若你的題目/選項是多個卡片） */
+      .grid, .grid2 {
+          display: grid;
+          gap: 12px;
+      }
+
+      .grid2 {
+          grid-template-columns: repeat(2, minmax(0,1fr));
+      }
+
+      @media (max-width: 560px) {
+          .grid2 {
+              grid-template-columns: 1fr;
+          }
+      }
+
+      /* 選項卡片：不改 HTML 的情況下，盡量涵蓋常見結構 */
+      .option, .choice, .card-option, ul.options > li, .list > li {
+          list-style: none;
+          background: #0b1220;
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          padding: 14px 16px;
+          cursor: pointer;
+          transition: transform .12s ease, background-color .12s ease, border-color .12s ease;
+      }
+
+          .option:hover, .choice:hover, .card-option:hover, ul.options > li:hover, .list > li:hover {
+              transform: translateY(-1px);
+              border-color: #2b3948;
+          }
+
+          .option.selected, .choice.selected, .card-option.selected, ul.options > li.selected, .list > li.selected {
+              background: linear-gradient(180deg, #0f1a2a, #0b1220 55%);
+              border-color: var(--accent);
+              box-shadow: 0 0 0 1px rgba(34,211,238,.25) inset;
+          }
+
+      /* 進度與輔助文字 */
+      .progress, .hint {
+          font-size: .875rem;
+          color: var(--muted);
+      }
+
+      /* 表單元素（名字/性別等） */
+      input[type="text"], input[type="search"], select {
+          width: 100%;
+          height: 44px;
+          border-radius: 12px;
+          border: 1px solid var(--line);
+          background: #0b1220;
+          color: var(--text);
+          padding: 0 12px;
+          outline: none;
+      }
+
+          input[type="text"]:focus, select:focus {
+              border-color: #2b3948;
+          }
+
+      /* 按鈕：沿用你原本的 .btn，但變得更一致 */
+      .btn {
+          appearance: none;
+          border: 1px solid var(--line);
+          background: #0b1220;
+          color: var(--text);
+          padding: 10px 14px;
+          border-radius: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: transform .08s ease, background-color .12s ease, border-color .12s ease;
+      }
+
+          .btn:hover {
+              transform: translateY(-1px);
+              border-color: #2b3948;
+          }
+
+          .btn:active {
+              transform: translateY(0);
+          }
+
+          .btn.primary {
+              background: var(--accent);
+              color: var(--accent-ink);
+              border-color: transparent;
+          }
+
+      /* 底部動作列：左右分散、與內容拉開距離 */
+      .footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-top: 8px;
+          padding-top: 12px;
+          border-top: 1px dashed var(--line);
+      }
+
+      /* 空狀態 / 首頁置中區塊（如果你有） */
+      .center {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 50vh;
+          text-align: center;
+          flex-direction: column;
+          gap: 16px;
+      }
+
+      /* 小螢幕的外距與圓角微調 */
+      @media (max-width: 480px) {
+          .safe {
+              padding: 12px;
+          }
+
+          :root {
+              --radius: 14px;
+          }
+      }
+      /* 全站字體：台灣常見黑體 + 粗體 */
+      html, body {
+          font-family: ui-sans-serif, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", Roboto, Arial, sans-serif;
+          font-weight: 700; /* 粗體 */
+          color: #fff; /* 文字改白色 */
+      }
+
+      /* 讓所有常見元素都吃到白字（避免被原本樣式覆蓋） */
+      h1, h2, h3, h4, h5, h6,
+      p, span, li, label, small, div,
+      button, input, select, textarea {
+          color: #fff !important;
+          font-weight: 700 !important; /* 粗體 */
+      }
+
+      /* 選項常見類名：確保卡片/清單選項是白字 */
+      .option, .choice, .card-option, ul.options > li, .list > li {
+          color: #fff !important;
+          font-weight: 700 !important;
+      }
+
+      /* 表單：輸入中的字與 placeholder 都要白色 */
+      input, select, textarea {
+          color: #fff !important;
+          font-weight: 700 !important;
+          background-color: transparent; /* 若你是深色背景，避免白底 */
+      }
+
+      ::placeholder {
+          color: rgba(255,255,255,.6);
+      }
+
+      /* 連結顏色（可改你喜歡的亮色） */
+      a {
+          color: #a5f3fc;
+          font-weight: 700;
+      }
+
   </style>
 </head>
 <body>
